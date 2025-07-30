@@ -66,8 +66,10 @@ def calcular_estimacion_tiempo(files):
 
 
 def procesar_archivos(files, theta_max):
-    resultados = []
+    buffer_csv = io.StringIO()
+    preview_data = []
     errores = []
+    header_written = False
 
     for file in files:
         try:
@@ -89,6 +91,7 @@ def procesar_archivos(files, theta_max):
             dec_str = dec_sign + df["DEC_d"].abs().astype(int).astype(str) + "d" + df["DEC_m"].astype(int).astype(str) + "m" + df["DEC_s"].astype(int).astype(str) + "s"
             coords = SkyCoord(ra=ra_str.values, dec=dec_str.values, frame="icrs")
 
+            resultados = []
             for key, c_star in st.session_state["carbon_stars"].items():
                 separations = coords.separation(c_star["coord"]).arcsecond
                 if len(separations) == 0:
@@ -103,14 +106,28 @@ def procesar_archivos(files, theta_max):
                     row["source_file"] = os.path.basename(file.name)
                     resultados.append(row)
 
+            if resultados:
+                df_result = pd.DataFrame(resultados)
+
+                # Guardar en CSV incremental
+                if not header_written:
+                    df_result.to_csv(buffer_csv, index=False)
+                    header_written = True
+                else:
+                    df_result.to_csv(buffer_csv, index=False, header=False)
+
+                # Guardar vista previa parcial
+                if len(preview_data) < 500:
+                    preview_data.append(df_result)
+
         except Exception as e:
             errores.append(f"{file.name}: {str(e)}")
 
-    if not resultados:
+    if buffer_csv.tell() == 0:
         return None, None, errores
 
-    df_result = pd.DataFrame(resultados)
-    return df_result, df_result.head(500), errores
+    df_preview = pd.concat(preview_data, ignore_index=True) if preview_data else pd.DataFrame()
+    return buffer_csv.getvalue(), df_preview, errores
 
 
 def fusionar_parciales(parciales):
@@ -133,7 +150,7 @@ def fusionar_parciales(parciales):
 # Interfaz de Streamlit
 # =========================
 st.set_page_config(page_title="Carbon Stars App", layout="wide")
-st.title("⭐ Carbon Stars v0.3.7")
+st.title("⭐ Carbon Stars v0.3.8 (procesamiento por parciales)")
 
 # --- Cargar catálogo ---
 st.header("📄 Cargar catálogo de estrellas")
@@ -150,19 +167,16 @@ asc_files = st.file_uploader("Subí de 1 a 10 archivos .asc", type=["asc"], acce
 
 if asc_files:
     if len(asc_files) > 10:
-        st.error("❌ No puedes procesar más de 10 archivos por grupo.")
+        st.error("❌ No puedes subir más de 10 archivos a la vez. Elimina algunos antes de continuar.")
     else:
         st.info(calcular_estimacion_tiempo(asc_files))
         theta_max = st.number_input("Filtro θ máximo (arcsec)", min_value=0.0, value=0.5, step=0.1)
         if st.button("Procesar grupo"):
             with st.spinner("Procesando grupo..."):
-                df_completo, df_preview, errores = procesar_archivos(asc_files, theta_max)
+                csv_parcial, df_preview, errores = procesar_archivos(asc_files, theta_max)
 
-            if df_completo is not None:
-                buffer = io.StringIO()
-                df_completo.to_csv(buffer, index=False)
-                st.session_state["parciales"].append(buffer.getvalue())
-
+            if csv_parcial:
+                st.session_state["parciales"].append(csv_parcial)
                 st.success(f"✅ Grupo procesado y guardado como parcial #{len(st.session_state['parciales'])}")
                 st.dataframe(df_preview, use_container_width=True)
             else:
@@ -179,7 +193,6 @@ if st.session_state["parciales"]:
             csv_final, df_preview = fusionar_parciales(st.session_state["parciales"])
         st.success("✅ Fusión completada.")
         st.dataframe(df_preview, use_container_width=True)
-
         st.download_button("⬇️ Descargar resultados completos", data=csv_final, file_name="resultados_final.csv", mime="text/csv")
 else:
     st.info("Procesá al menos un grupo de hasta 10 archivos antes de fusionar.")
