@@ -140,7 +140,7 @@ if asc_files:
 
     theta_max = st.number_input("Filtro θ máximo (arcsec)", min_value=0.0, value=0.5, step=0.1)
 
-    confirmar = st.checkbox("✅ Confirmar procesamiento")
+    confirmar = st.checkbox("Confirmar procesamiento")
     if confirmar and st.button("Procesar"):
         resultados, msg = procesar_archivos(asc_files, theta_max)
         st.info(msg)
