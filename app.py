@@ -3,6 +3,7 @@ import pandas as pd
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 import os
+import time
 
 # =========================
 # Estado global
@@ -51,10 +52,10 @@ def calcular_estimacion_tiempo(files):
     if not files:
         return "⚠️ No se subieron archivos .asc."
     total_mb = sum(file.size for file in files) / 1_000_000
-    tiempo_aprox = total_mb / 0.6
-    t_min = round(tiempo_aprox * 0.9)
-    t_max = round(tiempo_aprox * 1.1)
-    return f"🕒 El procesamiento tomará entre {t_min} y {t_max} segundos."
+    tiempo_aprox = total_mb * 0.5  # 0.5 seg por MB
+    t_min = round((tiempo_aprox * 0.9) / 60)
+    t_max = round((tiempo_aprox * 1.1) / 60)
+    return f"🕒 El procesamiento tomará entre {t_min} y {t_max} minutos."
 
 
 def procesar_archivos(files, theta_max):
@@ -107,7 +108,6 @@ def procesar_archivos(files, theta_max):
             mensaje_error += "\n⚠️ Archivos con problemas:\n" + "\n".join(errores)
         return None, mensaje_error
 
-
     df_result = pd.DataFrame(resultados)
     if errores:
         df_result['⚠️ Observaciones'] = ""
@@ -120,7 +120,7 @@ def procesar_archivos(files, theta_max):
 # Interfaz de Streamlit
 # =========================
 st.set_page_config(page_title="Carbon Stars App", layout="wide")
-st.title("⭐ Carbon Stars v0.3.0")
+st.title("⭐ Carbon Stars v0.3.1")
 
 # --- Cargar catálogo ---
 st.header("📄 Cargar catálogo de estrellas")
@@ -142,7 +142,15 @@ if asc_files:
 
     confirmar = st.checkbox("Confirmar procesamiento")
     if confirmar and st.button("Procesar"):
-        resultados, msg = procesar_archivos(asc_files, theta_max)
+        with st.spinner("Procesando archivos..."):
+            status = st.empty()
+            # Simulación de contador mientras se procesa (solo visual)
+            for i in range(3):
+                status.text(f"Procesando... {i+1} segundos")
+                time.sleep(1)
+
+            resultados, msg = procesar_archivos(asc_files, theta_max)
+
         st.info(msg)
         if resultados is not None:
             st.dataframe(resultados, use_container_width=True)
