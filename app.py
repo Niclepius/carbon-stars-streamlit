@@ -103,7 +103,7 @@ def procesar_lote(files, theta_max):
     return pd.DataFrame(resultados), errores
 
 
-def procesar_archivos(files, theta_max, batch_size=5):
+def procesar_archivos(files, theta_max, batch_size=2):
     if not st.session_state["carbon_stars"]:
         return None, None, "⚠️ Primero cargá el catálogo antes de procesar."
 
@@ -111,14 +111,20 @@ def procesar_archivos(files, theta_max, batch_size=5):
     errores_totales = []
 
     num_batches = math.ceil(len(files) / batch_size)
+    progress = st.progress(0)
+    status_text = st.empty()
 
     for i in range(num_batches):
         batch_files = files[i * batch_size:(i + 1) * batch_size]
-        st.write(f"🔄 Procesando lote {i+1}/{num_batches}...")
+        status_text.text(f"🔄 Procesando lote {i+1}/{num_batches}...")
         df_lote, errores = procesar_lote(batch_files, theta_max)
         if not df_lote.empty:
             resultados_totales.append(df_lote)
         errores_totales.extend(errores)
+
+        progress.progress((i + 1) / num_batches)
+
+    status_text.text("✅ Procesamiento de lotes finalizado.")
 
     if not resultados_totales:
         mensaje_error = "❌ No se encontraron coincidencias."
@@ -136,7 +142,7 @@ def procesar_archivos(files, theta_max, batch_size=5):
 # Interfaz de Streamlit
 # =========================
 st.set_page_config(page_title="Carbon Stars App", layout="wide")
-st.title("⭐ Carbon Stars v0.3.3")
+st.title("⭐ Carbon Stars v0.3.4")
 
 # --- Cargar catálogo ---
 st.header("📄 Cargar catálogo de estrellas")
@@ -158,7 +164,7 @@ if asc_files:
 
     if confirmar and st.button("Procesar"):
         with st.spinner("Procesando archivos en lotes..."):
-            df_completo, df_preview, msg = procesar_archivos(asc_files, theta_max, batch_size=5)
+            df_completo, df_preview, msg = procesar_archivos(asc_files, theta_max, batch_size=2)
 
         st.info(msg)
         if df_completo is not None:
