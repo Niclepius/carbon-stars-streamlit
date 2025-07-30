@@ -3,15 +3,18 @@ import pandas as pd
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 import os
-import time
-import math
 import io
+import time
 
 # =========================
 # Estado global
 # =========================
 if "carbon_stars" not in st.session_state:
     st.session_state["carbon_stars"] = {}
+
+if "intermedios" not in st.session_state:
+    st.session_state["intermedios"] = []  # Lista de CSV intermedios
+
 
 # =========================
 # Funciones principales
@@ -36,9 +39,12 @@ def cargar_catalogo(file):
                 ra_str = " ".join(partes[2:5])
                 dec_str = " ".join(partes[5:8])
                 try:
-                    coord = SkyCoord(f"{ra_str} {dec_str}", unit=(u.hourangle, u.deg), frame='icrs')
+                    coord = SkyCoord(f"{ra_str} {dec_str}", unit=(u.hourangle, u.deg), frame="icrs")
                     st.session_state["carbon_stars"][key] = {
-                        'name': name, 'coord': coord, 'ra': ra_str, 'dec': dec_str
+                        "name": name,
+                        "coord": coord,
+                        "ra": ra_str,
+                        "dec": dec_str,
                     }
                     estrellas.append((key, name, ra_str, dec_str))
                 except Exception as e:
@@ -60,7 +66,7 @@ def calcular_estimacion_tiempo(files):
     return f"🕒 El procesamiento tomará entre {t_min} y {t_max} minutos."
 
 
-def procesar_lote(files, theta_max):
+def procesar_archivos(files, theta_max):
     resultados = []
     errores = []
 
@@ -72,88 +78,54 @@ def procesar_lote(files, theta_max):
                 continue
 
             df = df[[0, 1, 2, 3, 4, 5, 8, 9, 11]].copy()
-            df.columns = ['RA_h', 'RA_m', 'RA_s', 'DEC_d', 'DEC_m', 'DEC_s', 'MAG', 'MAG_ERR', 'TYPE']
-            df = df[df['TYPE'] == -1].reset_index(drop=True)
+            df.columns = ["RA_h", "RA_m", "RA_s", "DEC_d", "DEC_m", "DEC_s", "MAG", "MAG_ERR", "TYPE"]
+            df = df[df["TYPE"] == -1].reset_index(drop=True)
 
             if df.empty:
                 errores.append(f"{file.name}: sin fuentes tipo -1")
                 continue
 
-            ra_str = df['RA_h'].astype(int).astype(str) + "h" + df['RA_m'].astype(int).astype(str) + "m" + df['RA_s'].astype(str) + "s"
-            dec_sign = df['DEC_d'].apply(lambda x: '-' if x < 0 else '+')
-            dec_str = dec_sign + df['DEC_d'].abs().astype(int).astype(str) + "d" + df['DEC_m'].astype(int).astype(str) + "m" + df['DEC_s'].astype(int).astype(str) + "s"
-            coords = SkyCoord(ra=ra_str.values, dec=dec_str.values, frame='icrs')
+            ra_str = df["RA_h"].astype(int).astype(str) + "h" + df["RA_m"].astype(int).astype(str) + "m" + df["RA_s"].astype(str) + "s"
+            dec_sign = df["DEC_d"].apply(lambda x: "-" if x < 0 else "+")
+            dec_str = dec_sign + df["DEC_d"].abs().astype(int).astype(str) + "d" + df["DEC_m"].astype(int).astype(str) + "m" + df["DEC_s"].astype(int).astype(str) + "s"
+            coords = SkyCoord(ra=ra_str.values, dec=dec_str.values, frame="icrs")
 
             for key, c_star in st.session_state["carbon_stars"].items():
-                separations = coords.separation(c_star['coord']).arcsecond
+                separations = coords.separation(c_star["coord"]).arcsecond
                 if len(separations) == 0:
                     continue
                 min_idx = separations.argmin()
 
                 if separations[min_idx] <= theta_max:
                     row = df.loc[min_idx].copy()
-                    row['carbon_star_key'] = key
-                    row['coord'] = str(coords[min_idx])
-                    row['separation_arcsec'] = separations[min_idx]
-                    row['source_file'] = os.path.basename(file.name)
+                    row["carbon_star_key"] = key
+                    row["coord"] = str(coords[min_idx])
+                    row["separation_arcsec"] = separations[min_idx]
+                    row["source_file"] = os.path.basename(file.name)
                     resultados.append(row)
 
         except Exception as e:
             errores.append(f"{file.name}: {str(e)}")
 
-    return pd.DataFrame(resultados), errores
+    if not resultados:
+        return None, None, errores
+
+    df_result = pd.DataFrame(resultados)
+    return df_result, df_result.head(500), errores
 
 
-def procesar_archivos(files, theta_max, batch_size=2):
-    if not st.session_state["carbon_stars"]:
-        return None, None, "⚠️ Primero cargá el catálogo antes de procesar."
-
-    buffer_csv = io.StringIO()
-    preview_data = []
-    errores_totales = []
-
-    num_batches = math.ceil(len(files) / batch_size)
-    progress = st.progress(0)
-    status_text = st.empty()
-
-    header_written = False
-
-    for i in range(num_batches):
-        batch_files = files[i * batch_size:(i + 1) * batch_size]
-        status_text.text(f"🔄 Procesando lote {i+1}/{num_batches}...")
-        df_lote, errores = procesar_lote(batch_files, theta_max)
-
-        if not df_lote.empty:
-            if not header_written:
-                df_lote.to_csv(buffer_csv, index=False)
-                header_written = True
-            else:
-                df_lote.to_csv(buffer_csv, index=False, header=False)
-
-            if len(preview_data) < 500:  # Solo llenar vista previa hasta 500 filas
-                preview_data.append(df_lote)
-
-        errores_totales.extend(errores)
-        progress.progress((i + 1) / num_batches)
-
-    status_text.text("✅ Procesamiento de lotes finalizado.")
-
-    if buffer_csv.tell() == 0:
-        mensaje_error = "❌ No se encontraron coincidencias."
-        if errores_totales:
-            mensaje_error += "\n⚠️ Archivos con problemas:\n" + "\n".join(errores_totales)
-        return None, None, mensaje_error
-
-    df_preview = pd.concat(preview_data, ignore_index=True) if preview_data else pd.DataFrame()
-
-    return buffer_csv.getvalue(), df_preview, "✅ Procesamiento finalizado."
+def fusionar_intermedios(intermedios):
+    if not intermedios:
+        return None
+    dataframes = [pd.read_csv(io.StringIO(csv)) for csv in intermedios]
+    return pd.concat(dataframes, ignore_index=True)
 
 
 # =========================
 # Interfaz de Streamlit
 # =========================
 st.set_page_config(page_title="Carbon Stars App", layout="wide")
-st.title("⭐ Carbon Stars v0.3.5")
+st.title("⭐ Carbon Stars v0.3.6")
 
 # --- Cargar catálogo ---
 st.header("📄 Cargar catálogo de estrellas")
@@ -165,20 +137,43 @@ if st.button("Cargar catálogo"):
         st.dataframe(catalog_df, use_container_width=True)
 
 # --- Subida de archivos ASC ---
-st.header("📁 Procesar archivos .asc")
-asc_files = st.file_uploader("Subí uno o varios archivos .asc", type=["asc"], accept_multiple_files=True)
+st.header("📁 Procesar grupo de hasta 10 archivos .asc")
+asc_files = st.file_uploader("Subí de 1 a 10 archivos .asc", type=["asc"], accept_multiple_files=True)
 
 if asc_files:
-    st.info(calcular_estimacion_tiempo(asc_files))
-    theta_max = st.number_input("Filtro θ máximo (arcsec)", min_value=0.0, value=0.5, step=0.1)
-    confirmar = st.checkbox("Confirmar procesamiento")
+    if len(asc_files) > 10:
+        st.warning("⚠️ Solo se pueden procesar hasta 10 archivos por grupo.")
+    else:
+        st.info(calcular_estimacion_tiempo(asc_files))
+        theta_max = st.number_input("Filtro θ máximo (arcsec)", min_value=0.0, value=0.5, step=0.1)
+        if st.button("Procesar grupo"):
+            with st.spinner("Procesando grupo..."):
+                df_completo, df_preview, errores = procesar_archivos(asc_files, theta_max)
 
-    if confirmar and st.button("Procesar"):
-        with st.spinner("Procesando archivos en lotes..."):
-            csv_content, df_preview, msg = procesar_archivos(asc_files, theta_max, batch_size=2)
+            if df_completo is not None:
+                # Guardar como CSV intermedio en memoria
+                buffer = io.StringIO()
+                df_completo.to_csv(buffer, index=False)
+                st.session_state["intermedios"].append(buffer.getvalue())
 
-        st.info(msg)
-        if csv_content:
-            st.dataframe(df_preview, use_container_width=True)
-            st.download_button("⬇️ Descargar resultados completos", data=csv_content, file_name="resultados.csv", mime="text/csv")
+                st.success(f"✅ Grupo procesado y guardado como intermedio #{len(st.session_state['intermedios'])}")
+                st.dataframe(df_preview, use_container_width=True)
+            else:
+                st.error("❌ No se encontraron coincidencias en este grupo.")
+                if errores:
+                    st.warning("⚠️ Errores:\n" + "\n".join(errores))
 
+# --- Fusionar intermedios ---
+st.header("🔗 Fusionar grupos intermedios")
+if st.session_state["intermedios"]:
+    st.write(f"Se han generado {len(st.session_state['intermedios'])} archivos intermedios.")
+    if st.button("Fusionar intermedios"):
+        df_final = fusionar_intermedios(st.session_state["intermedios"])
+        st.success("✅ Fusión completada.")
+        st.dataframe(df_final.head(500), use_container_width=True)
+
+        # Botón de descarga
+        csv = df_final.to_csv(index=False).encode("utf-8")
+        st.download_button("⬇️ Descargar resultados completos", data=csv, file_name="resultados_final.csv", mime="text/csv")
+else:
+    st.info("Procesá al menos un grupo de hasta 10 archivos antes de fusionar.")
