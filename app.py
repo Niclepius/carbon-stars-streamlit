@@ -4,7 +4,6 @@ from astropy.coordinates import SkyCoord
 import astropy.units as u
 import os
 import io
-import time
 
 # =========================
 # Estado global
@@ -12,8 +11,8 @@ import time
 if "carbon_stars" not in st.session_state:
     st.session_state["carbon_stars"] = {}
 
-if "intermedios" not in st.session_state:
-    st.session_state["intermedios"] = []  # Lista de CSV intermedios
+if "parciales" not in st.session_state:
+    st.session_state["parciales"] = []  # Lista de CSV parciales
 
 
 # =========================
@@ -114,18 +113,27 @@ def procesar_archivos(files, theta_max):
     return df_result, df_result.head(500), errores
 
 
-def fusionar_intermedios(intermedios):
-    if not intermedios:
-        return None
-    dataframes = [pd.read_csv(io.StringIO(csv)) for csv in intermedios]
-    return pd.concat(dataframes, ignore_index=True)
+def fusionar_parciales(parciales):
+    buffer_csv = io.StringIO()
+    header_written = False
+
+    for parcial in parciales:
+        df = pd.read_csv(io.StringIO(parcial))
+        if not header_written:
+            df.to_csv(buffer_csv, index=False)
+            header_written = True
+        else:
+            df.to_csv(buffer_csv, index=False, header=False)
+
+    df_preview = pd.read_csv(io.StringIO(buffer_csv.getvalue()), nrows=500)
+    return buffer_csv.getvalue(), df_preview
 
 
 # =========================
 # Interfaz de Streamlit
 # =========================
 st.set_page_config(page_title="Carbon Stars App", layout="wide")
-st.title("⭐ Carbon Stars v0.3.6")
+st.title("⭐ Carbon Stars v0.3.7")
 
 # --- Cargar catálogo ---
 st.header("📄 Cargar catálogo de estrellas")
@@ -142,7 +150,7 @@ asc_files = st.file_uploader("Subí de 1 a 10 archivos .asc", type=["asc"], acce
 
 if asc_files:
     if len(asc_files) > 10:
-        st.warning("⚠️ Solo se pueden procesar hasta 10 archivos por grupo.")
+        st.error("❌ No puedes procesar más de 10 archivos por grupo.")
     else:
         st.info(calcular_estimacion_tiempo(asc_files))
         theta_max = st.number_input("Filtro θ máximo (arcsec)", min_value=0.0, value=0.5, step=0.1)
@@ -151,29 +159,27 @@ if asc_files:
                 df_completo, df_preview, errores = procesar_archivos(asc_files, theta_max)
 
             if df_completo is not None:
-                # Guardar como CSV intermedio en memoria
                 buffer = io.StringIO()
                 df_completo.to_csv(buffer, index=False)
-                st.session_state["intermedios"].append(buffer.getvalue())
+                st.session_state["parciales"].append(buffer.getvalue())
 
-                st.success(f"✅ Grupo procesado y guardado como intermedio #{len(st.session_state['intermedios'])}")
+                st.success(f"✅ Grupo procesado y guardado como parcial #{len(st.session_state['parciales'])}")
                 st.dataframe(df_preview, use_container_width=True)
             else:
                 st.error("❌ No se encontraron coincidencias en este grupo.")
                 if errores:
                     st.warning("⚠️ Errores:\n" + "\n".join(errores))
 
-# --- Fusionar intermedios ---
-st.header("🔗 Fusionar grupos intermedios")
-if st.session_state["intermedios"]:
-    st.write(f"Se han generado {len(st.session_state['intermedios'])} archivos intermedios.")
-    if st.button("Fusionar intermedios"):
-        df_final = fusionar_intermedios(st.session_state["intermedios"])
+# --- Fusionar parciales ---
+st.header("🔗 Fusionar parciales")
+if st.session_state["parciales"]:
+    st.write(f"Se han generado {len(st.session_state['parciales'])} archivos parciales.")
+    if st.button("Fusionar parciales"):
+        with st.spinner("Fusionando parciales..."):
+            csv_final, df_preview = fusionar_parciales(st.session_state["parciales"])
         st.success("✅ Fusión completada.")
-        st.dataframe(df_final.head(500), use_container_width=True)
+        st.dataframe(df_preview, use_container_width=True)
 
-        # Botón de descarga
-        csv = df_final.to_csv(index=False).encode("utf-8")
-        st.download_button("⬇️ Descargar resultados completos", data=csv, file_name="resultados_final.csv", mime="text/csv")
+        st.download_button("⬇️ Descargar resultados completos", data=csv_final, file_name="resultados_final.csv", mime="text/csv")
 else:
     st.info("Procesá al menos un grupo de hasta 10 archivos antes de fusionar.")
