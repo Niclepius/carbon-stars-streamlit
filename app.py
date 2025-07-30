@@ -5,6 +5,7 @@ import astropy.units as u
 import os
 import time
 import math
+import io
 
 # =========================
 # Estado global
@@ -107,42 +108,52 @@ def procesar_archivos(files, theta_max, batch_size=2):
     if not st.session_state["carbon_stars"]:
         return None, None, "⚠️ Primero cargá el catálogo antes de procesar."
 
-    resultados_totales = []
+    buffer_csv = io.StringIO()
+    preview_data = []
     errores_totales = []
 
     num_batches = math.ceil(len(files) / batch_size)
     progress = st.progress(0)
     status_text = st.empty()
 
+    header_written = False
+
     for i in range(num_batches):
         batch_files = files[i * batch_size:(i + 1) * batch_size]
         status_text.text(f"🔄 Procesando lote {i+1}/{num_batches}...")
         df_lote, errores = procesar_lote(batch_files, theta_max)
-        if not df_lote.empty:
-            resultados_totales.append(df_lote)
-        errores_totales.extend(errores)
 
+        if not df_lote.empty:
+            if not header_written:
+                df_lote.to_csv(buffer_csv, index=False)
+                header_written = True
+            else:
+                df_lote.to_csv(buffer_csv, index=False, header=False)
+
+            if len(preview_data) < 500:  # Solo llenar vista previa hasta 500 filas
+                preview_data.append(df_lote)
+
+        errores_totales.extend(errores)
         progress.progress((i + 1) / num_batches)
 
     status_text.text("✅ Procesamiento de lotes finalizado.")
 
-    if not resultados_totales:
+    if buffer_csv.tell() == 0:
         mensaje_error = "❌ No se encontraron coincidencias."
         if errores_totales:
             mensaje_error += "\n⚠️ Archivos con problemas:\n" + "\n".join(errores_totales)
         return None, None, mensaje_error
 
-    df_completo = pd.concat(resultados_totales, ignore_index=True)
-    df_preview = df_completo.head(500)
+    df_preview = pd.concat(preview_data, ignore_index=True) if preview_data else pd.DataFrame()
 
-    return df_completo, df_preview, "✅ Procesamiento finalizado."
+    return buffer_csv.getvalue(), df_preview, "✅ Procesamiento finalizado."
 
 
 # =========================
 # Interfaz de Streamlit
 # =========================
 st.set_page_config(page_title="Carbon Stars App", layout="wide")
-st.title("⭐ Carbon Stars v0.3.4")
+st.title("⭐ Carbon Stars v0.3.5")
 
 # --- Cargar catálogo ---
 st.header("📄 Cargar catálogo de estrellas")
@@ -164,10 +175,10 @@ if asc_files:
 
     if confirmar and st.button("Procesar"):
         with st.spinner("Procesando archivos en lotes..."):
-            df_completo, df_preview, msg = procesar_archivos(asc_files, theta_max, batch_size=2)
+            csv_content, df_preview, msg = procesar_archivos(asc_files, theta_max, batch_size=2)
 
         st.info(msg)
-        if df_completo is not None:
+        if csv_content:
             st.dataframe(df_preview, use_container_width=True)
-            csv = df_completo.to_csv(index=False).encode('utf-8')
-            st.download_button("⬇️ Descargar resultados completos", data=csv, file_name="resultados.csv", mime="text/csv")
+            st.download_button("⬇️ Descargar resultados completos", data=csv_content, file_name="resultados.csv", mime="text/csv")
+
