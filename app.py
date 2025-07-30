@@ -150,7 +150,7 @@ def fusionar_parciales(parciales):
 # Interfaz de Streamlit
 # =========================
 st.set_page_config(page_title="Carbon Stars App", layout="wide")
-st.title("⭐ Carbon Stars v0.3.8 (procesamiento por parciales)")
+st.title("⭐ Carbon Stars v0.3.8")
 
 # --- Cargar catálogo ---
 st.header("📄 Cargar catálogo de estrellas")
