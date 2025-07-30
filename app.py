@@ -102,7 +102,11 @@ def procesar_archivos(files, theta_max):
             errores.append(f"{file.name}: {str(e)}")
 
     if not resultados:
-        return None, "❌ No se encontraron coincidencias.\n" + ("\n".join(errores) if errores else "❌ Error desconocido.")
+        mensaje_error = "❌ No se encontraron coincidencias."
+        if errores:
+            mensaje_error += "\n⚠️ Archivos con problemas:\n" + "\n".join(errores)
+        return None, mensaje_error
+
 
     df_result = pd.DataFrame(resultados)
     if errores:
