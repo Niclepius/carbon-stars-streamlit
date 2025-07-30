@@ -4,6 +4,7 @@ from astropy.coordinates import SkyCoord
 import astropy.units as u
 import os
 import time
+import math
 
 # =========================
 # Estado global
@@ -58,10 +59,7 @@ def calcular_estimacion_tiempo(files):
     return f"🕒 El procesamiento tomará entre {t_min} y {t_max} minutos."
 
 
-def procesar_archivos(files, theta_max):
-    if not st.session_state["carbon_stars"]:
-        return None, "⚠️ Primero cargá el catálogo antes de procesar."
-
+def procesar_lote(files, theta_max):
     resultados = []
     errores = []
 
@@ -80,7 +78,6 @@ def procesar_archivos(files, theta_max):
                 errores.append(f"{file.name}: sin fuentes tipo -1")
                 continue
 
-            # Construcción de coordenadas
             ra_str = df['RA_h'].astype(int).astype(str) + "h" + df['RA_m'].astype(int).astype(str) + "m" + df['RA_s'].astype(str) + "s"
             dec_sign = df['DEC_d'].apply(lambda x: '-' if x < 0 else '+')
             dec_str = dec_sign + df['DEC_d'].abs().astype(int).astype(str) + "d" + df['DEC_m'].astype(int).astype(str) + "m" + df['DEC_s'].astype(int).astype(str) + "s"
@@ -92,10 +89,10 @@ def procesar_archivos(files, theta_max):
                     continue
                 min_idx = separations.argmin()
 
-                if separations[min_idx] <= theta_max:  # Filtro por θ
+                if separations[min_idx] <= theta_max:
                     row = df.loc[min_idx].copy()
                     row['carbon_star_key'] = key
-                    row['coord'] = str(coords[min_idx])  # Convertir a string
+                    row['coord'] = str(coords[min_idx])
                     row['separation_arcsec'] = separations[min_idx]
                     row['source_file'] = os.path.basename(file.name)
                     resultados.append(row)
@@ -103,29 +100,43 @@ def procesar_archivos(files, theta_max):
         except Exception as e:
             errores.append(f"{file.name}: {str(e)}")
 
-    if not resultados:
+    return pd.DataFrame(resultados), errores
+
+
+def procesar_archivos(files, theta_max, batch_size=5):
+    if not st.session_state["carbon_stars"]:
+        return None, None, "⚠️ Primero cargá el catálogo antes de procesar."
+
+    resultados_totales = []
+    errores_totales = []
+
+    num_batches = math.ceil(len(files) / batch_size)
+
+    for i in range(num_batches):
+        batch_files = files[i * batch_size:(i + 1) * batch_size]
+        st.write(f"🔄 Procesando lote {i+1}/{num_batches}...")
+        df_lote, errores = procesar_lote(batch_files, theta_max)
+        if not df_lote.empty:
+            resultados_totales.append(df_lote)
+        errores_totales.extend(errores)
+
+    if not resultados_totales:
         mensaje_error = "❌ No se encontraron coincidencias."
-        if errores:
-            mensaje_error += "\n⚠️ Archivos con problemas:\n" + "\n".join(errores)
-        return None, mensaje_error
+        if errores_totales:
+            mensaje_error += "\n⚠️ Archivos con problemas:\n" + "\n".join(errores_totales)
+        return None, None, mensaje_error
 
-    df_result = pd.DataFrame(resultados)
+    df_completo = pd.concat(resultados_totales, ignore_index=True)
+    df_preview = df_completo.head(500)
 
-    # Limitar visualización a 500 filas
-    df_preview = df_result.head(500)
-
-    if errores:
-        df_result['⚠️ Observaciones'] = ""
-        df_result.loc[0, '⚠️ Observaciones'] = "Algunos archivos fallaron:\n" + "\n".join(errores)
-
-    return df_result, df_preview, "✅ Procesamiento finalizado."
+    return df_completo, df_preview, "✅ Procesamiento finalizado."
 
 
 # =========================
 # Interfaz de Streamlit
 # =========================
 st.set_page_config(page_title="Carbon Stars App", layout="wide")
-st.title("⭐ Carbon Stars v0.3.2")
+st.title("⭐ Carbon Stars v0.3.3")
 
 # --- Cargar catálogo ---
 st.header("📄 Cargar catálogo de estrellas")
@@ -142,22 +153,15 @@ asc_files = st.file_uploader("Subí uno o varios archivos .asc", type=["asc"], a
 
 if asc_files:
     st.info(calcular_estimacion_tiempo(asc_files))
-
     theta_max = st.number_input("Filtro θ máximo (arcsec)", min_value=0.0, value=0.5, step=0.1)
-
     confirmar = st.checkbox("Confirmar procesamiento")
-    if confirmar and st.button("Procesar"):
-        with st.spinner("Procesando archivos..."):
-            status = st.empty()
-            for i in range(3):
-                status.text(f"Procesando... {i+1} segundos")
-                time.sleep(1)
 
-            df_completo, df_preview, msg = procesar_archivos(asc_files, theta_max)
+    if confirmar and st.button("Procesar"):
+        with st.spinner("Procesando archivos en lotes..."):
+            df_completo, df_preview, msg = procesar_archivos(asc_files, theta_max, batch_size=5)
 
         st.info(msg)
         if df_completo is not None:
             st.dataframe(df_preview, use_container_width=True)
             csv = df_completo.to_csv(index=False).encode('utf-8')
             st.download_button("⬇️ Descargar resultados completos", data=csv, file_name="resultados.csv", mime="text/csv")
-
