@@ -3,7 +3,6 @@ import pandas as pd
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 import os
-import io
 
 # =========================
 # Estado global
@@ -58,7 +57,7 @@ def calcular_estimacion_tiempo(files):
     return f"🕒 El procesamiento tomará entre {t_min} y {t_max} segundos."
 
 
-def procesar_archivos(files):
+def procesar_archivos(files, theta_max):
     if not st.session_state["carbon_stars"]:
         return None, "⚠️ Primero cargá el catálogo antes de procesar."
 
@@ -72,7 +71,7 @@ def procesar_archivos(files):
                 errores.append(f"{file.name}: columnas insuficientes")
                 continue
 
-            df = df[[0,1,2,3,4,5,8,9,11]].copy()
+            df = df[[0, 1, 2, 3, 4, 5, 8, 9, 11]].copy()
             df.columns = ['RA_h', 'RA_m', 'RA_s', 'DEC_d', 'DEC_m', 'DEC_s', 'MAG', 'MAG_ERR', 'TYPE']
             df = df[df['TYPE'] == -1].reset_index(drop=True)
 
@@ -80,7 +79,7 @@ def procesar_archivos(files):
                 errores.append(f"{file.name}: sin fuentes tipo -1")
                 continue
 
-            ra_str = df['RA_h'].astype(int).astype(str) + "h" + df['RA_m'].astype(int).astype.str() + "m" + df['RA_s'].astype(str) + "s"
+            ra_str = df['RA_h'].astype(int).astype(str) + "h" + df['RA_m'].astype(int).astype(str) + "m" + df['RA_s'].astype(str) + "s"
             dec_sign = df['DEC_d'].apply(lambda x: '-' if x < 0 else '+')
             dec_str = dec_sign + df['DEC_d'].abs().astype(int).astype(str) + "d" + df['DEC_m'].astype(int).astype(str) + "m" + df['DEC_s'].astype(int).astype(str) + "s"
             coords = SkyCoord(ra=ra_str.values, dec=dec_str.values, frame='icrs')
@@ -90,12 +89,14 @@ def procesar_archivos(files):
                 if len(separations) == 0:
                     continue
                 min_idx = separations.argmin()
-                row = df.loc[min_idx].copy()
-                row['carbon_star_key'] = key
-                row['coord'] = coords[min_idx]
-                row['separation_arcsec'] = separations[min_idx]
-                row['source_file'] = os.path.basename(file.name)
-                resultados.append(row)
+
+                if separations[min_idx] <= theta_max:  # Filtro por θ
+                    row = df.loc[min_idx].copy()
+                    row['carbon_star_key'] = key
+                    row['coord'] = str(coords[min_idx])  # Convertir a string
+                    row['separation_arcsec'] = separations[min_idx]
+                    row['source_file'] = os.path.basename(file.name)
+                    resultados.append(row)
 
         except Exception as e:
             errores.append(f"{file.name}: {str(e)}")
@@ -115,7 +116,7 @@ def procesar_archivos(files):
 # Interfaz de Streamlit
 # =========================
 st.set_page_config(page_title="Carbon Stars App", layout="wide")
-st.title("⭐ Carbon Stars v0.3")
+st.title("⭐ Carbon Stars v0.3.0")
 
 # --- Cargar catálogo ---
 st.header("📄 Cargar catálogo de estrellas")
@@ -132,12 +133,14 @@ asc_files = st.file_uploader("Subí uno o varios archivos .asc", type=["asc"], a
 
 if asc_files:
     st.info(calcular_estimacion_tiempo(asc_files))
+
+    theta_max = st.number_input("Filtro θ máximo (arcsec)", min_value=0.0, value=0.5, step=0.1)
+
     confirmar = st.checkbox("✅ Confirmar procesamiento")
     if confirmar and st.button("Procesar"):
-        resultados, msg = procesar_archivos(asc_files)
+        resultados, msg = procesar_archivos(asc_files, theta_max)
         st.info(msg)
         if resultados is not None:
             st.dataframe(resultados, use_container_width=True)
-            # Botón para descargar
             csv = resultados.to_csv(index=False).encode('utf-8')
             st.download_button("⬇️ Descargar resultados", data=csv, file_name="resultados.csv", mime="text/csv")
