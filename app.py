@@ -80,6 +80,7 @@ def procesar_archivos(files, theta_max):
                 errores.append(f"{file.name}: sin fuentes tipo -1")
                 continue
 
+            # Construcción de coordenadas
             ra_str = df['RA_h'].astype(int).astype(str) + "h" + df['RA_m'].astype(int).astype(str) + "m" + df['RA_s'].astype(str) + "s"
             dec_sign = df['DEC_d'].apply(lambda x: '-' if x < 0 else '+')
             dec_str = dec_sign + df['DEC_d'].abs().astype(int).astype(str) + "d" + df['DEC_m'].astype(int).astype(str) + "m" + df['DEC_s'].astype(int).astype(str) + "s"
@@ -109,18 +110,22 @@ def procesar_archivos(files, theta_max):
         return None, mensaje_error
 
     df_result = pd.DataFrame(resultados)
+
+    # Limitar visualización a 500 filas
+    df_preview = df_result.head(500)
+
     if errores:
         df_result['⚠️ Observaciones'] = ""
         df_result.loc[0, '⚠️ Observaciones'] = "Algunos archivos fallaron:\n" + "\n".join(errores)
 
-    return df_result, "✅ Procesamiento finalizado."
+    return df_result, df_preview, "✅ Procesamiento finalizado."
 
 
 # =========================
 # Interfaz de Streamlit
 # =========================
 st.set_page_config(page_title="Carbon Stars App", layout="wide")
-st.title("⭐ Carbon Stars v0.3.1")
+st.title("⭐ Carbon Stars v0.3.2")
 
 # --- Cargar catálogo ---
 st.header("📄 Cargar catálogo de estrellas")
@@ -144,15 +149,15 @@ if asc_files:
     if confirmar and st.button("Procesar"):
         with st.spinner("Procesando archivos..."):
             status = st.empty()
-            # Simulación de contador mientras se procesa (solo visual)
             for i in range(3):
                 status.text(f"Procesando... {i+1} segundos")
                 time.sleep(1)
 
-            resultados, msg = procesar_archivos(asc_files, theta_max)
+            df_completo, df_preview, msg = procesar_archivos(asc_files, theta_max)
 
         st.info(msg)
-        if resultados is not None:
-            st.dataframe(resultados, use_container_width=True)
-            csv = resultados.to_csv(index=False).encode('utf-8')
-            st.download_button("⬇️ Descargar resultados", data=csv, file_name="resultados.csv", mime="text/csv")
+        if df_completo is not None:
+            st.dataframe(df_preview, use_container_width=True)
+            csv = df_completo.to_csv(index=False).encode('utf-8')
+            st.download_button("⬇️ Descargar resultados completos", data=csv, file_name="resultados.csv", mime="text/csv")
+
