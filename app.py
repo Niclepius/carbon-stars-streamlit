@@ -67,11 +67,13 @@ def calcular_estimacion_tiempo(files):
 
 def procesar_archivos(files, theta_max):
     buffer_csv = io.StringIO()
-    preview_data = []
     errores = []
     header_written = False
+    preview_data = []
 
-    for file in files:
+    for idx, file in enumerate(files, start=1):
+        st.write(f"📄 Procesando archivo {idx}/{len(files)}: **{file.name}**")
+
         try:
             df = pd.read_csv(file, delim_whitespace=True, header=None)
             if df.shape[1] < 12:
@@ -108,14 +110,17 @@ def procesar_archivos(files, theta_max):
 
             if resultados:
                 df_result = pd.DataFrame(resultados)
+
+                # Guardar incrementalmente en CSV
                 if not header_written:
                     df_result.to_csv(buffer_csv, index=False)
                     header_written = True
                 else:
                     df_result.to_csv(buffer_csv, index=False, header=False)
 
+                # Vista previa limitada
                 if len(preview_data) < 500:
-                    preview_data.append(df_result)
+                    preview_data.append(df_result.head(50))
 
         except Exception as e:
             errores.append(f"{file.name}: {str(e)}")
@@ -147,11 +152,11 @@ def fusionar_parciales(parciales):
 # Interfaz de Streamlit
 # =========================
 st.set_page_config(page_title="Carbon Stars App", layout="wide")
-st.title("⭐ Carbon Stars v0.3.10")
+st.title("⭐ Carbon Stars v0.3.11")
 
 # Mensaje destacado
 st.warning("⚠️ Importante: La app solo soporta grupos de hasta 10 archivos .asc por vez debido a las limitaciones del servidor.")
-st.info("ℹ️ Los archivos deben cargarse y procesarse en grupos de 10 para evitar errores. Una vez procesados, los resultados parciales se pueden fusionar en un único archivo final.")
+st.info("ℹ️ Nota para el profesor: Los archivos deben cargarse y procesarse en grupos de 10 para evitar errores. Una vez procesados, los resultados parciales se pueden fusionar en un único archivo final.")
 
 # --- Cargar catálogo ---
 st.header("📄 Cargar catálogo de estrellas")
