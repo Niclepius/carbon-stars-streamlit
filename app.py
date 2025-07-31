@@ -150,7 +150,7 @@ def fusionar_parciales(parciales):
 # Interfaz de Streamlit
 # =========================
 st.set_page_config(page_title="Carbon Stars App", layout="wide")
-st.title("⭐ Carbon Stars v0.3.8")
+st.title("⭐ Carbon Stars v0.3.9")
 
 # --- Cargar catálogo ---
 st.header("📄 Cargar catálogo de estrellas")
@@ -167,8 +167,11 @@ asc_files = st.file_uploader("Subí de 1 a 10 archivos .asc", type=["asc"], acce
 
 if asc_files:
     if len(asc_files) > 10:
-        st.error("❌ No puedes subir más de 10 archivos a la vez. Elimina algunos antes de continuar.")
-    else:
+        st.error("❌ Solo puedes subir un máximo de 10 archivos. Elimina algunos y vuelve a intentar.")
+        asc_files = []  # Limpiar para evitar cualquier intento de procesamiento
+
+if asc_files:
+    if 1 <= len(asc_files) <= 10:
         st.info(calcular_estimacion_tiempo(asc_files))
         theta_max = st.number_input("Filtro θ máximo (arcsec)", min_value=0.0, value=0.5, step=0.1)
         if st.button("Procesar grupo"):
