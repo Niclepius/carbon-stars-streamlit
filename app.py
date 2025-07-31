@@ -50,7 +50,7 @@ def cargar_catalogo(file):
                     print(f"Error en la línea: {line.strip()} – {e}")
 
     if estrellas:
-        return pd.DataFrame(estrellas, columns=["ID", "Nombre", "RA", "DEC"]), "✅ Catálogo cargado correctamente."
+        return pd.DataFrame(estrellas, columns=["ID", "Nombre", "RA", "DEC"]), "✅ Merlo Carbon Star Catalog cargado correctamente."
     else:
         return pd.DataFrame(), "⚠️ No se pudieron cargar estrellas del catálogo."
 
@@ -108,15 +108,12 @@ def procesar_archivos(files, theta_max):
 
             if resultados:
                 df_result = pd.DataFrame(resultados)
-
-                # Guardar en CSV incremental
                 if not header_written:
                     df_result.to_csv(buffer_csv, index=False)
                     header_written = True
                 else:
                     df_result.to_csv(buffer_csv, index=False, header=False)
 
-                # Guardar vista previa parcial
                 if len(preview_data) < 500:
                     preview_data.append(df_result)
 
@@ -150,7 +147,11 @@ def fusionar_parciales(parciales):
 # Interfaz de Streamlit
 # =========================
 st.set_page_config(page_title="Carbon Stars App", layout="wide")
-st.title("⭐ Carbon Stars v0.3.9")
+st.title("⭐ Carbon Stars v0.3.10")
+
+# Mensaje destacado
+st.warning("⚠️ Importante: La app solo soporta grupos de hasta 10 archivos .asc por vez debido a las limitaciones del servidor.")
+st.info("ℹ️ Los archivos deben cargarse y procesarse en grupos de 10 para evitar errores. Una vez procesados, los resultados parciales se pueden fusionar en un único archivo final.")
 
 # --- Cargar catálogo ---
 st.header("📄 Cargar catálogo de estrellas")
@@ -167,8 +168,8 @@ asc_files = st.file_uploader("Subí de 1 a 10 archivos .asc", type=["asc"], acce
 
 if asc_files:
     if len(asc_files) > 10:
-        st.error("❌ Solo puedes subir un máximo de 10 archivos. Elimina algunos y vuelve a intentar.")
-        asc_files = []  # Limpiar para evitar cualquier intento de procesamiento
+        st.error("🚫 No puedes subir más de 10 archivos a la vez. Por favor, selecciona 10 o menos.")
+        asc_files = []
 
 if asc_files:
     if 1 <= len(asc_files) <= 10:
