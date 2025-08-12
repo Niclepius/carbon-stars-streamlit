@@ -46,10 +46,10 @@ La aplicación estará disponible en:
 
 ## Archivos de prueba incluidos
 
-En este repositorio se incluyen **dos archivos de prueba** para validar la app en segundos:
+En este repositorio se incluyen **dos archivos reales de prueba** para validar la app:
 
-- `examples/test_catalog.csv` — Catálogo base (columnas `ra`, `dec` en grados; opcionalmente `id`).
-- `examples/test_sources.asc` — Archivo `.asc` con coordenadas (RA, DEC por línea).
+- `Testing/merlo_carbon_star_catalog.txt` — Catálogo base (Merlo Carbon Star Catalog).
+- `Testing/v20100313_00394_st_tl_cat.asc` — Archivo `.asc` con coordenadas de fuentes.
 
 ### Cómo probar con los archivos incluidos
 
@@ -60,8 +60,9 @@ En este repositorio se incluyen **dos archivos de prueba** para validar la app e
    Abrir [http://localhost:8501](http://localhost:8501).
 
 2. En la interfaz:
-   - En **“1) Catálogo base”**, subir `examples/test_catalog.csv` (seleccionar el separador correcto; por lo general “CSV (coma)”).
-   - En **“2) Archivos .asc”**, subir `examples/test_sources.asc`.
+   - En **“1) Catálogo base”**, subir `Testing/merlo_carbon_star_catalog.txt`.  
+     *(Seleccionar separador: probablemente “TSV (tab)” o “Punto y coma” según el formato).*
+   - En **“2) Archivos .asc”**, subir `Testing/v20100313_00394_st_tl_cat.asc`.
    - Ajustar el **umbral θ (arcsec)** si lo desean y presionar **“Procesar”**.
 
 3. Descargar los resultados combinados con el botón **“⬇️ Descargar resultados (CSV)”**.
@@ -104,12 +105,6 @@ Agregar el usuario al grupo `docker`:
 sudo usermod -aG docker $USER
 newgrp docker
 ```
-
----
-
-## Ejemplo rápido
-
-Para probar la aplicación sin datos propios, se pueden colocar un archivo de catálogo y uno `.asc` de ejemplo en la carpeta `examples/` y subirlos a través de la interfaz.
 
 ---
 
