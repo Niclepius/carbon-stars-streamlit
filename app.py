@@ -12,8 +12,8 @@ import astropy.units as u
 # =========================
 # Config
 # =========================
-st.set_page_config(page_title="Carbon Stars • v0.4.0", layout="wide")
-st.title("Carbon Stars v0.4.0)")
+st.set_page_config(page_title="Carbon Stars • v0.4.2", layout="wide")
+st.title("Carbon Stars v0.4.2")
 
 st.write(
     "1) Subí tu **catálogo** (Merlo/ALFA-DELTA o RA/DEC) → se normaliza a `ra/dec` en grados.\n"
