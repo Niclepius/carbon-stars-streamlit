@@ -320,34 +320,47 @@ def match_catalog_to_ascs(cat_df: pd.DataFrame, asc_list: List[Tuple[str, pd.Dat
         best_file[better] = fname
         best_row_idx[better] = idx[better]
 
-    # Construir tabla final
-    for i, row in cat_valid.reset_index(drop=False).itertuples():
+        # Construir tabla final
+    results = []
+    cat_reset = cat_valid.reset_index(drop=True)
+
+    for i, row in cat_reset.iterrows():
         sep = best_sep[i]
+        # Id de la estrella (STAR, NOMBRE o índice)
+        if "STAR" in cat_reset.columns:
+            star_id_val = row["STAR"]
+        elif "NOMBRE" in cat_reset.columns:
+            star_id_val = row["NOMBRE"]
+        else:
+            star_id_val = i
+
         if np.isfinite(sep) and sep <= theta_arcsec:
             src_file = best_file[i]
-            src_idx = best_row_idx[i]
-            # Recuperar datos del .asc
-            asc_df = dict(asc_list)[src_file]
-            asc_row = asc_df.dropna(subset=["ra","dec"]).iloc[src_idx]
+            src_idx = int(best_row_idx[i])
+
+            # Recuperar datos del .asc con el MISMO dropna() que se usó para hacer match
+            asc_df_full = dict(asc_list)[src_file]
+            asc_valid = asc_df_full.dropna(subset=["ra", "dec"])
+            asc_row = asc_valid.iloc[src_idx]
 
             results.append({
-                "star_id": row.STAR if ("STAR" in cat_valid.columns) else (row.NOMBRE if ("NOMBRE" in cat_valid.columns) else row.Index),
-                "cat_ra_deg": row.ra,
-                "cat_dec_deg": row.dec,
-                "match_file": src_file,
-                "match_ra_deg": float(asc_row["ra"]),
+                "star_id":       star_id_val,
+                "cat_ra_deg":    float(row["ra"]),
+                "cat_dec_deg":   float(row["dec"]),
+                "match_file":    src_file,
+                "match_ra_deg":  float(asc_row["ra"]),
                 "match_dec_deg": float(asc_row["dec"]),
-                "theta_arcsec": float(sep)
+                "theta_arcsec":  float(sep),
             })
         else:
             results.append({
-                "star_id": row.STAR if ("STAR" in cat_valid.columns) else (row.NOMBRE if ("NOMBRE" in cat_valid.columns) else row.Index),
-                "cat_ra_deg": row.ra,
-                "cat_dec_deg": row.dec,
-                "match_file": "",
-                "match_ra_deg": np.nan,
+                "star_id":       star_id_val,
+                "cat_ra_deg":    float(row["ra"]),
+                "cat_dec_deg":   float(row["dec"]),
+                "match_file":    "",
+                "match_ra_deg":  np.nan,
                 "match_dec_deg": np.nan,
-                "theta_arcsec": np.nan
+                "theta_arcsec":  np.nan,
             })
 
     return pd.DataFrame(results)
