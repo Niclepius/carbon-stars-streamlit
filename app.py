@@ -14,7 +14,7 @@ import astropy.units as u
 # ----------------------------
 st.set_page_config(page_title="Carbon Stars • Catálogo", layout="wide")
 
-st.title("Carbon Stars – Carga y normalización de catálogo")
+st.title("Carbon Stars v0.4.0")
 st.write(
     "Este lector intenta estandarizar las columnas de coordenadas del catálogo "
     "para producir siempre `ra` y `dec` en **grados**."
