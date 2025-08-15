@@ -68,8 +68,8 @@ Este documento explica **cómo ejecutar la app** de Carbon Stars tanto con **Doc
 
 ## Archivos de ejemplo
 
-- `data_ejemplo/merlo_carbon_star_catalog.txt`
-- `data_ejemplo/ejemplo.asc`
+- `merlo_carbon_star_catalog.txt`
+- `v20100313_00394_st_tl_cat.rar (.asc file)`
 
 ---
 
