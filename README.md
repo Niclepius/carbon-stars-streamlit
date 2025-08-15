@@ -40,12 +40,15 @@ App para:
 ├─ stop_app.sh
 ├─ INSTRUCCIONES_OBSERVATORIO.md
 ├─ CHANGELOG.md
+├─ LICENSE
+├─ .gitignore
 ├─ data_ejemplo/
 │  ├─ merlo_carbon_star_catalog.txt
 │  └─ ejemplo.asc
 └─ screenshots/
    ├─ 01_home.png
    └─ 02_matching_ok.png
+
 
 ## Troubleshooting
 - **“No module named 'scipy'”** -> revisar `requirements.txt` y reconstruir imagen.
