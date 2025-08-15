@@ -50,7 +50,8 @@ App para:
 │  └─ v20100313_00394_st_tl_cat.rar (.asc file)
 └─ screenshots/
    ├─ 01_home.png
-   └─ 02_matching_ok.png
+   └─ 02_matching_ok_1.png
+   └─ 03_matching_ok_2.png
    </pre>
 
 
