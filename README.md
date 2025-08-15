@@ -39,9 +39,9 @@ App para:
 ├─ requirements.txt
 ├─ Dockerfile
 ├─ make_test.sh
-├─ start_app.sh
-├─ stop_app.sh
-├─ INSTRUCCIONES_OBSERVATORIO.md
+├─ start_app.sh - start_app.bat
+├─ stop_app.sh - stop_app.bat
+├─ Instrucciones_de_uso.md
 ├─ CHANGELOG.md
 ├─ LICENSE
 ├─ .gitignore
