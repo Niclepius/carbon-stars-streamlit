@@ -24,8 +24,8 @@ App para:
 ./start_app.sh
 ```
 (para detener: ./stop_app.sh)
-Windows: usar los `.bat`.
-Linux/WSL/Mac: usar los `.sh`.
+- Windows: usar los `.bat`.
+- Linux/WSL/Mac: usar los `.sh`.
 
 ## Uso dentro de la app
 - Subir el catálogo (`.txt/.csv/.tsv`). Se detecta cabecera ALFA/DELTA o RA/DEC.
