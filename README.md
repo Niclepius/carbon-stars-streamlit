@@ -32,6 +32,7 @@ App para:
 - Descargar el CSV.
 
 ## Estructura
+<pre> ```text
 ├─ app.py
 ├─ requirements.txt
 ├─ Dockerfile
@@ -48,6 +49,7 @@ App para:
 └─ screenshots/
    ├─ 01_home.png
    └─ 02_matching_ok.png
+   </pre>
 
 
 ## Troubleshooting
