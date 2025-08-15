@@ -18,10 +18,7 @@ Este documento explica **cómo ejecutar la app** de Carbon Stars tanto con **Doc
      ./start_app.sh
      ```
    - **Windows**:
-     - Doble clic en `start_app.bat` **o** desde PowerShell/CMD:
-       ```bat
-       start_app.bat
-       ```
+     - Doble clic en `start_app.bat`
 
 3. **Abrir en el navegador**:  
    <http://localhost:8501>
