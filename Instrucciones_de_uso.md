@@ -29,14 +29,11 @@ Este documento explica **cómo ejecutar la app** de Carbon Stars tanto con **Doc
      ./stop_app.sh
      ```
    - **Windows**:
-     - Doble clic en `stop_app.bat` **o**:
-       ```bat
-       stop_app.bat
-       ```
+     - Doble clic en `stop_app.bat` 
 
 > **Notas**  
 > - Los scripts de arranque construyen la imagen y levantan el contenedor automáticamente.  
-> - Si el navegador no muestra cambios tras actualizar el código, **reiniciá** el contenedor (volver a ejecutar el script).
+> - Si el navegador no muestra cambios tras actualizar el código, **reiniciar** el contenedor (volver a ejecutar el script).
 
 ---
 
