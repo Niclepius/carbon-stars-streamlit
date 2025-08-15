@@ -1,12 +1,10 @@
-# Instrucciones – Carbon Stars (Observatorio)
+# Instrucciones Observatorio
 
-Este documento explica **cómo ejecutar la app** de Carbon Stars tanto con **Docker** (recomendado) como sin Docker, y describe el **flujo de uso** y la **resolución de problemas** más comunes.
+Este documento explica **cómo ejecutar la app** de Carbon Stars tanto con **Docker** como sin Docker, y describe el **flujo de uso** y la **resolución de problemas** más comunes.
 
 ---
 
-## Opción A: con Docker (recomendado)
-
-> **Requisitos**: Docker Engine (Linux) o Docker Desktop (Windows/Mac).
+## Con Docker 
 
 1. **Clonar el repositorio**:
    ```bash
@@ -45,9 +43,7 @@ Este documento explica **cómo ejecutar la app** de Carbon Stars tanto con **Doc
 
 ---
 
-## Opción B: sin Docker (Python local)
-
-> **Requisitos**: Python 3.10+ y `pip`.
+## Sin Docker (Python local)
 
 1. **Instalar dependencias**:
    ```bash
@@ -67,7 +63,7 @@ Este documento explica **cómo ejecutar la app** de Carbon Stars tanto con **Doc
 
 1. **Cargar Catálogo** (Merlo **ALFA/DELTA** o **RA/DEC**).  
    La app normaliza automáticamente y crea columnas **`ra`** y **`dec`** en **grados**.
-2. **Cargar archivos `.asc`** (uno o varios).  
+2. **Cargar archivos `.asc`** (uno por ahora).  
    La app ignora líneas con `#`, detecta separadores (espacios/tabs) y normaliza RA/DEC.
 3. **Ajustar** **θ (arcsec)** y presionar **“Ejecutar matching”**.  
    El sistema realiza el emparejamiento por **mínima separación angular**.
@@ -83,13 +79,13 @@ Este documento explica **cómo ejecutar la app** de Carbon Stars tanto con **Doc
 
 ---
 
-## Problemas frecuentes (Troubleshooting)
+## Problemas frecuentes
 
 - **“No module named 'scipy'” / errores de Astropy**  
   → Usar **Docker** o instalar dependencias con `pip install -r requirements.txt` y volver a ejecutar.
 
 - **“problema de codificación o formato” al leer el catálogo**  
-  → La app detecta cabecera **ALFA/DELTA**; si el archivo tiene encabezados no estándar, enviar una muestra para ajustar el lector.
+  → La app detecta cabecera **ALFA/DELTA**
 
 - **No se ven los cambios en la app**  
   → Reiniciar el contenedor: `./start_app.sh` (Linux/WSL/Mac) o `start_app.bat` (Windows).
@@ -98,9 +94,3 @@ Este documento explica **cómo ejecutar la app** de Carbon Stars tanto con **Doc
   → Cerrar procesos previos (`./stop_app.sh` o `stop_app.bat`) o cambiar de puerto en el comando de Streamlit.
 
 ---
-
-## Notas finales
-
-- La app funciona en **ICRS** (RA/DEC) y entrega coordenadas en **grados**.  
-- Para reproducibilidad, se proveen **Dockerfile**, **scripts de arranque** y **requirements**.  
-- Cualquier formato de catálogo/`.asc` fuera de los contemplados puede incorporarse rápidamente con un ejemplo de archivo.
