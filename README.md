@@ -47,7 +47,7 @@ App para:
 ├─ .gitignore
 ├─ data_ejemplo/
 │  ├─ merlo_carbon_star_catalog.txt
-│  └─ ejemplo.asc
+│  └─ v20100313_00394_st_tl_cat.rar (.asc file)
 └─ screenshots/
    ├─ 01_home.png
    └─ 02_matching_ok.png
