@@ -1,4 +1,4 @@
-# Instrucciones Observatorio
+# Instrucciones de Uso
 
 Este documento explica **cómo ejecutar la app** de Carbon Stars tanto con **Docker** como sin Docker, y describe el **flujo de uso** y la **resolución de problemas** más comunes.
 
