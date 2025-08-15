@@ -32,7 +32,6 @@ App para:
 - Descargar el CSV.
 
 ## Estructura
-.
 ├─ app.py
 ├─ requirements.txt
 ├─ Dockerfile
