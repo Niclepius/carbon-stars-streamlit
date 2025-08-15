@@ -32,7 +32,7 @@ App para:
 - Descargar el CSV.
 
 ## Estructura
-<pre> ```text
+<pre>
 ├─ app.py
 ├─ requirements.txt
 ├─ Dockerfile
